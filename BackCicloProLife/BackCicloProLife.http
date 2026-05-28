@@ -1,0 +1,6 @@
+@BackCicloProLife_HostAddress = http://localhost:5160
+
+GET {{BackCicloProLife_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
