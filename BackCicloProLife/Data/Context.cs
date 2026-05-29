@@ -7,10 +7,10 @@ namespace BackCicloProLife.Data
     {
         public Context(DbContextOptions<Context> options) : base(options){ }
 
-        public DbSet<Usuario> Usuario { get; set; }
-        public DbSet<Receita> Receita { get; set; }
-        public DbSet<Venda> Venda { get; set; }
-        public DbSet<Ingrediente> Ingrediente { get; set; }
-        public DbSet<IngredienteReceita> IngredienteReceita { get; set; }
+        public DbSet<Usuario> usuario { get; set; }
+        public DbSet<Receita> receita { get; set; }
+        public DbSet<Venda> venda { get; set; }
+        public DbSet<Ingrediente> ingrediente { get; set; }
+        public DbSet<IngredienteReceita> ingredienteReceita { get; set; }
     }
 }
