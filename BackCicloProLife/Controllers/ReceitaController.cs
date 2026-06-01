@@ -19,22 +19,30 @@ namespace BackCicloProLife.Controllers
         }
 
         [HttpPost("cadastrar")]
-        public IActionResult CadastrarReceita(Receita receita)
+        public IActionResult CadastrarReceita(Models.Receita receita)
         {
-            var idLogado = Request.Cookies["IdLogado"];
-
-            if (idLogado == null)
+            // Valida se o Colaborador existe no banco
+            if (receita.FkUsuarioColaborador.HasValue && receita.FkUsuarioColaborador.Value > 0)
             {
-                return Unauthorized("Realize o login para continuar.");
+                var colaboradorExiste = _context.usuario.Any(u => u.IdUsuario == receita.FkUsuarioColaborador);
+                if (!colaboradorExiste)
+                    return BadRequest($"O ID de Colaborador '{receita.FkUsuarioColaborador}' não existe na tabela de usuários.");
             }
 
-            receita.FkUsuarioIdUsuarioColaborador = int.Parse(idLogado);
-
-            var usuarioExiste = _context.usuario.Any(u => u.IdUsuario == receita.FkUsuarioIdUsuarioColaborador);
-
-            if (!usuarioExiste)
+            // Valida se o Chefe existe no banco
+            if (receita.FkUsuarioChefe.HasValue && receita.FkUsuarioChefe.Value > 0)
             {
-                return NotFound($"Erro: O usuário com ID {receita.FkUsuarioIdUsuarioColaborador} não existe.");
+                var chefeExiste = _context.usuario.Any(u => u.IdUsuario == receita.FkUsuarioChefe);
+                if (!chefeExiste)
+                    return BadRequest($"O ID de Chefe '{receita.FkUsuarioChefe}' não existe na tabela de usuários.");
+            }
+
+            // Valida se o Gestor existe no banco
+            if (receita.FkUsuarioGestor.HasValue && receita.FkUsuarioGestor.Value > 0)
+            {
+                var gestorExiste = _context.usuario.Any(u => u.IdUsuario == receita.FkUsuarioGestor);
+                if (!gestorExiste)
+                    return BadRequest($"O ID de Gestor '{receita.FkUsuarioGestor}' não existe na tabela de usuários.");
             }
 
             _context.receita.Add(receita);

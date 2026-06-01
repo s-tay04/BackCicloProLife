@@ -1,9 +1,19 @@
-﻿namespace BackCicloProLife.Models
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace BackCicloProLife.Models
 {
+    [Table("ingredienteReceita")]
+    [PrimaryKey(nameof(FkIngrediente), nameof(FkReceita))]
     public class IngredienteReceita
     {
-        public int IdIngrediente { get; set; }
-        public int IdReceita { get; set; }
-        public double Quantiade { get; set; }
+        [Column("fk_ingrediente_idIngrediente")]
+        public int FkIngrediente { get; set; }
+
+        [Column("fk_receita_idReceita")]
+        public int FkReceita { get; set; }
+
+        [Column("quantidade")]
+        public decimal Quantidade { get; set; }
     }
 }
