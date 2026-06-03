@@ -1,6 +1,8 @@
 ﻿using BackCicloProLife.Data;
 using BackCicloProLife.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 
 namespace BackCicloProLife.Controllers
 {
@@ -81,12 +83,33 @@ namespace BackCicloProLife.Controllers
 
             return Created("", new { mensagem = "Usuário cadastrado com sucesso!", sucesso = true });
         }
+
+
+        [HttpDelete("delete/{id}")]
+        public IActionResult DeletarUsuario(int id)
+        {
+            var sessao = HttpContext.Session.GetString("IdLogado");
+            if (sessao == null)
+            {
+                return Unauthorized("Realize o login para continuar.");
+            }
+
+            var usuarioBanco = _context.usuario.Find(id);
+
+            if (usuarioBanco == null)
+                return NotFound("Usuário não encontrado.");
+
+            _context.usuario.Remove(usuarioBanco);
+            _context.SaveChanges();
+
+            return Ok("Usuário deletado!");
+        }
     }
 
-    // para fazer o login sem nome e cargo até irmos para o front
+    // Para fazer o login sem nome e cargo até irmos para o front
     public class LoginRequest
     {
-        public string Email { get; set; }
-        public string Senha { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string Senha { get; set; } = string.Empty;
     }
 }

@@ -99,7 +99,7 @@ namespace BackCicloProLife.Controllers
         }
 
         // DELETAR
-        [HttpDelete("delete")]
+        [HttpDelete("delete/{id}")]
         public IActionResult DeletarReceita(int id)
         {
             var sessao = HttpContext.Session.GetString("IdLogado");
