@@ -11,7 +11,7 @@ namespace BackCicloProLife.Controllers
     {
         private readonly Context _context; //liga ao banco de dados
 
-            public IngredienteController(Context context)
+        public IngredienteController(Context context)
         {
             _context = context;
         }
@@ -35,5 +35,19 @@ namespace BackCicloProLife.Controllers
 
             return Created("", ingrediente);
         }
+
+        //Buscar ingredientes
+        [HttpGet("buscar")]
+        public IActionResult BuscarIngredientes([FromQuery] string? nome) //permite que o usuario busque o ingrediente pelo nome
+        {
+            var query = _context.ingrediente.AsQueryable();
+
+            if (!string.IsNullOrEmpty(nome))
+            {
+                query = query.Where(i => i.NomeIngrediente.Contains(nome));
+            }
+            var resultado = query.ToList();
+            return Ok(resultado);
+        }        
     }
 }
