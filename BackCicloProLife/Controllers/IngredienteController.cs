@@ -48,6 +48,27 @@ namespace BackCicloProLife.Controllers
             }
             var resultado = query.ToList();
             return Ok(resultado);
-        }        
+        }
+
+        //Atualizar ingrediente
+        [HttpPut("atualizar")]
+        public IActionResult AtualizarIngrediente(int id, Ingrediente ingrediente) //Permite atulizar (só é possivel quando o usuario esta logado)
+        {
+            var sessao = HttpContext.Session.GetString("IdLogado");
+
+            if (sessao == null)
+            {
+                return Unauthorized("Usuário não logado."); 
+            }
+
+            var igredienteDoBanco = _context.ingrediente.Find(id); //procura o ingrediente pelo id
+            if (igredienteDoBanco == null)
+            {
+                return NotFound("Ingrediente não encontrado.");
+            }
+
+            _context.SaveChanges();
+            return Ok(igredienteDoBanco); //salva a atualização do ingrediente no banco de dados
+        }
     }
 }
