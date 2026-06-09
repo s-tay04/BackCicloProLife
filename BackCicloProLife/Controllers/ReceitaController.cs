@@ -140,5 +140,26 @@ namespace BackCicloProLife.Controllers
 
             return Ok(resultado);
         }
+
+        // LISTAR RECEITAS (cards)
+        [HttpGet("listar")]
+        public IActionResult ListarReceitas()
+        {
+            try
+            {
+                var receitas = _context.receita.ToList();
+
+                if (receitas == null || !receitas.Any())
+                {
+                    return Ok(new List<Models.Receita>());
+                }
+
+                return Ok(receitas);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Erro interno ao buscar receitas: {ex.Message}");
+            }
+        }
     }
 }
