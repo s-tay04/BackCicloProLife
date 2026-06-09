@@ -70,5 +70,31 @@ namespace BackCicloProLife.Controllers
             _context.SaveChanges();
             return Ok(igredienteDoBanco); //salva a atualização do ingrediente no banco de dados
         }
+
+        
+        //Deletar ingrediente
+        [HttpDelete("deletar/{id}")]
+        public IActionResult DeletarIngredientes(int id)
+        {
+            var sessao = HttpContext.Session.GetString("IdLogado");
+
+            if (sessao == null)
+            {
+                return Unauthorized("Realize login para continuar."); //Verifica se o usuario esta logado, caso não esteja, ele não pode deletar o ingrediente
+            }
+
+
+            var ingrediente = _context.ingrediente.Find(id);
+
+            if (ingrediente == null)
+            {
+                return NotFound("Ingrediente não encontrado.");
+            }
+
+            _context.ingrediente.Remove(ingrediente);
+            _context.SaveChanges();
+
+            return Ok("Ingrediente deletado!");
+        }
     }
 }
