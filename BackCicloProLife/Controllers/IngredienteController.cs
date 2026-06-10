@@ -74,14 +74,28 @@ namespace BackCicloProLife.Controllers
                 return Unauthorized("Usuário não logado."); 
             }
 
-            var igredienteDoBanco = _context.ingrediente.Find(id); //procura o ingrediente pelo id
-            if (igredienteDoBanco == null)
+            var ingredienteDoBanco = _context.ingrediente.Find(id); //procura o ingrediente pelo id
+            if (ingredienteDoBanco == null)
             {
                 return NotFound("Ingrediente não encontrado.");
             }
 
+            if (string.IsNullOrWhiteSpace(ingrediente.NomeIngrediente))
+            {
+                return BadRequest("O nome do ingrediente é obrigatório.");
+            }
+
+            if (string.IsNullOrWhiteSpace(ingrediente.UnidadeFornecimento))
+            {
+                return BadRequest("A unidade de fornecimento é obrigatória.");
+            }
+
+            ingredienteDoBanco.NomeIngrediente = ingrediente.NomeIngrediente;
+            ingredienteDoBanco.UnidadeFornecimento = ingrediente.UnidadeFornecimento;
+
             _context.SaveChanges();
-            return Ok(igredienteDoBanco); //salva a atualização do ingrediente no banco de dados
+
+            return Ok("Ingrediente atualizado com sucesso.");
         }
 
         
