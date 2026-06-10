@@ -20,6 +20,12 @@ namespace BackCicloProLife.Controllers
         [HttpPost("cadastrar")]
         public IActionResult CadastrarIngrediente(Ingrediente ingrediente)
         {
+            var sessao = HttpContext.Session.GetString("IdLogado");
+            if (sessao == null)
+            {
+                return Unauthorized("Realize login para continuar."); //Verifica se o usuario esta logado, caso não esteja, ele não pode cadastrar o ingrediente
+            }
+
             if (string.IsNullOrWhiteSpace(ingrediente.NomeIngrediente))
             {
                 return BadRequest("O nome do ingrediente é obrigatório."); //Verifica se o espaço está preenchido
@@ -40,6 +46,13 @@ namespace BackCicloProLife.Controllers
         [HttpGet("buscar")]
         public IActionResult BuscarIngredientes([FromQuery] string? nome) //permite que o usuario busque o ingrediente pelo nome
         {
+            var sessao = HttpContext.Session.GetString("IdLogado");
+
+            if (sessao == null)
+            {
+                return Unauthorized("Realize login para continuar."); //Verifica se o usuario esta logado, caso não esteja, ele não pode deletar o ingrediente
+            }
+
             var query = _context.ingrediente.AsQueryable();
 
             if (!string.IsNullOrEmpty(nome))
