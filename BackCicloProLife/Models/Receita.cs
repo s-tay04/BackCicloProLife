@@ -36,5 +36,11 @@ namespace BackCicloProLife.Models
 
         [Column("fk_usuario_idUsuarioGestor")]
         public int? FkUsuarioGestor { get; set; }
+
+        [Column("imagem")]
+        public string? Imagem {  get; set; }
+
+        [NotMapped]
+        public IFormFile? ArquivoImagem { get; set; }
     }
 }
