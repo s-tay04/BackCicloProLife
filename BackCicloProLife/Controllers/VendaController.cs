@@ -153,5 +153,21 @@ namespace BackCicloProLife.Controllers
 
             return Ok("Venda deletada!");
         }
+
+        // Agrupa vendas por receita e soma a quantidade
+        [HttpGet("grafico")]
+        public IActionResult GetResumoGrafico()
+        {
+            var dados = _context.venda
+                .GroupBy(v => v.FkReceita)
+                .Select(g => new {
+                    Produto = _context.receita.Where(r => r.IdReceita == g.Key).Select(r => r.Titulo).FirstOrDefault() ?? "Desconhecido",
+                    Quantidade = g.Sum(v => v.Quantidade)
+                })
+                .OrderByDescending(x => x.Quantidade)
+                .ToList();
+
+            return Ok(dados);
+        }
     }
 }
