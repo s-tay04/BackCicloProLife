@@ -22,28 +22,38 @@ namespace BackCicloProLife.Controllers
         [HttpPost("cadastrar")]
         public IActionResult CadastrarReceita(Models.Receita receita)
         {
-            // Valida se o COLABORADOR existe no banco
-            if (receita.FkUsuarioColaborador.HasValue && receita.FkUsuarioColaborador.Value > 0)
+            var sessao = HttpContext.Session.GetString("IdLogado");
+
+            if (sessao == null)
             {
-                var colaboradorExiste = _context.usuario.Any(u => u.IdUsuario == receita.FkUsuarioColaborador);
-                if (!colaboradorExiste)
-                    return BadRequest($"O ID de Colaborador '{receita.FkUsuarioColaborador}' não existe na tabela de usuários.");
+                return Unauthorized("Faça login para cadastrar uma receita.");
             }
 
-            // Valida se o CHEFE existe no banco
-            if (receita.FkUsuarioChefe.HasValue && receita.FkUsuarioChefe.Value > 0)
-            {
-                var chefeExiste = _context.usuario.Any(u => u.IdUsuario == receita.FkUsuarioChefe);
-                if (!chefeExiste)
-                    return BadRequest($"O ID de Chefe '{receita.FkUsuarioChefe}' não existe na tabela de usuários.");
-            }
+            var idUsuario = Convert.ToInt32(sessao);
 
-            // Valida se o GESTOR existe no banco
-            if (receita.FkUsuarioGestor.HasValue && receita.FkUsuarioGestor.Value > 0)
+            receita.FkUsuarioColaborador = idUsuario;
+
+            receita.DataCadastro = DateTime.Now;
+            receita.Status = "Pendente";
+
+            if (receita.ArquivoImagem != null)
             {
-                var gestorExiste = _context.usuario.Any(u => u.IdUsuario == receita.FkUsuarioGestor);
-                if (!gestorExiste)
-                    return BadRequest($"O ID de Gestor '{receita.FkUsuarioGestor}' não existe na tabela de usuários.");
+                var nomeArquivo = Guid.NewGuid().ToString() +
+                                  Path.GetExtension(receita.ArquivoImagem.FileName);
+
+                var pasta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+
+                if (!Directory.Exists(pasta))
+                    Directory.CreateDirectory(pasta);
+
+                var caminho = Path.Combine(pasta, nomeArquivo);
+
+                using (var stream = new FileStream(caminho, FileMode.Create))
+                {
+                receita.ArquivoImagem.CopyToAsync(stream);
+                }
+
+                receita.Imagem = nomeArquivo;
             }
 
             _context.receita.Add(receita);

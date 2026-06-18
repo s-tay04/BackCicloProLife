@@ -9,7 +9,7 @@ namespace BackCicloProLife.Controllers
     [Route("[controller]")]
     public class IngredienteReceitaController: ControllerBase
     {
-        private readonly Context _context; // Liga o controller ao banco de dados
+        private readonly Context _context;
         public IngredienteReceitaController(Context context)
         {
             _context = context;

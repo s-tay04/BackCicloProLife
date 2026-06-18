@@ -25,6 +25,9 @@ namespace BackCicloProLife.Models
         [Column("status")]
         public string Status { get; set; } = string.Empty;
 
+        [Column("dataCadastro")]
+        public DateTime DataCadastro { get; set; }
+
         [Column("feedbackChefe")]
         public string FeedbackChefe { get; set; } = string.Empty;
 
@@ -37,7 +40,7 @@ namespace BackCicloProLife.Models
         [Column("fk_usuario_idUsuarioGestor")]
         public int? FkUsuarioGestor { get; set; }
 
-        [NotMapped]
+        [Column("imagem")]
         public string? Imagem { get; set; }
 
         [NotMapped]
