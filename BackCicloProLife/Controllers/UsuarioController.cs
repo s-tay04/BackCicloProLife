@@ -21,43 +21,66 @@ namespace BackCicloProLife.Controllers
         [HttpPost("cadastrar")]
         public IActionResult Cadastrar([FromBody] Usuario usuario)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             var emailExistente = _context.usuario
-                .Any(u => u.Email.Equals(usuario.Email));
+                .Any(u => u.Email.ToLower() == usuario.Email.ToLower());
 
             if (emailExistente)
             {
-                return Conflict(new { mensagem = "Já existe um usuário com esse e-mail.", sucesso = false });
+                return Conflict(new
+                {
+                    mensagem = "Já existe um usuário com esse e-mail.",
+                    sucesso = false
+                });
             }
 
             _context.usuario.Add(usuario);
             _context.SaveChanges();
 
-            return Created("", new { mensagem = "Usuário cadastrado com sucesso!", sucesso = true });
+            return Created("", new
+            {
+                mensagem = "Usuário cadastrado com sucesso!",
+                sucesso = true
+            });
         }
 
         // LOGIN
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest request)
         {
-            var resultado = _context.usuario
-                .Where(u => u.Email.Equals(request.Email) && u.Senha.Equals(request.Senha))
-                .ToList();
+            var usuario = _context.usuario
+                .FirstOrDefault(u =>
+                    u.Email.ToLower() == request.Email.ToLower()
+                    && u.Senha == request.Senha);
 
-            if (resultado.Count == 0)
+            if (usuario == null)
             {
-                return Unauthorized(new { mensagem = "Email ou senha inválidos.", sucesso = false });
+                return Unauthorized(new
+                {
+                    mensagem = "Email ou senha inválidos.",
+                    sucesso = false
+                });
             }
 
-            Response.Cookies.Append("IdLogado", resultado[0].IdUsuario.ToString(), new CookieOptions
+            Response.Cookies.Append("IdLogado", usuario.IdUsuario.ToString(), new CookieOptions
             {
                 HttpOnly = true,
-                Secure = false,
-                SameSite = SameSiteMode.Lax,
+                Secure = true,
+                SameSite = SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddMinutes(30),
                 Path = "/"
             });
 
-            return Ok(new { mensagem = resultado[0].Nome, cargo = resultado[0].Cargo, sucesso = true });
+            return Ok(new
+            {
+                mensagem = usuario.Nome,
+                cargo = usuario.Cargo,
+                sucesso = true
+            });
         }
 
         // VERIFICAR SE ESTÁ LOGADO
@@ -76,27 +99,92 @@ namespace BackCicloProLife.Controllers
         [HttpGet("perfil")]
         public IActionResult ObterPerfil()
         {
-            // Lê o cookie puro que injetamos acima
             var idCookie = Request.Cookies["IdLogado"];
 
             if (string.IsNullOrEmpty(idCookie))
             {
-                return Unauthorized(new { mensagem = "Usuário não está logado!" });
+                return Unauthorized(new
+                {
+                    mensagem = "Usuário não está logado!",
+                    sucesso = false
+                });
             }
 
-            int idUsuario = int.Parse(idCookie);
-            var usuarioBanco = _context.usuario.Find(idUsuario);
+            if (!int.TryParse(idCookie, out int idUsuario))
+            {
+                return BadRequest(new
+                {
+                    mensagem = "Cookie inválido.",
+                    sucesso = false
+                });
+            }
+
+            var usuarioBanco = _context.usuario.FirstOrDefault(u => u.IdUsuario == idUsuario);
 
             if (usuarioBanco == null)
             {
-                return NotFound(new { mensagem = "Usuário não encontrado." });
+                return NotFound(new
+                {
+                    mensagem = "Usuário não encontrado.",
+                    sucesso = false
+                });
             }
 
             return Ok(new
             {
                 nome = usuarioBanco.Nome,
                 email = usuarioBanco.Email,
-                cargo = usuarioBanco.Cargo
+                cargo = usuarioBanco.Cargo,
+                sucesso = true
+            });
+        }
+
+        // ALTERAR PERFIL
+        [HttpPut("alterarPerfil")]
+        public IActionResult AtualizarPerfil([FromBody] Usuario usuarioAtualizado)
+        {
+            var idCookie = Request.Cookies["IdLogado"];
+
+            if (string.IsNullOrEmpty(idCookie))
+            {
+                return Unauthorized(new
+                {
+                    mensagem = "Usuário não está logado!",
+                    sucesso = false
+                });
+            }
+
+            if (!int.TryParse(idCookie, out int idUsuario))
+            {
+                return BadRequest(new
+                {
+                    mensagem = "Cookie inválido.",
+                    sucesso = false
+                });
+            }
+
+            var usuarioBanco = _context.usuario
+                .FirstOrDefault(u => u.IdUsuario == idUsuario);
+
+            if (usuarioBanco == null)
+            {
+                return NotFound(new
+                {
+                    mensagem = "Usuário não encontrado.",
+                    sucesso = false
+                });
+            }
+
+            usuarioBanco.Nome = usuarioAtualizado.Nome;
+            usuarioBanco.Email = usuarioAtualizado.Email;
+            usuarioBanco.Cargo = usuarioAtualizado.Cargo;
+
+            _context.SaveChanges();
+
+            return Ok(new
+            {
+                mensagem = "Perfil atualizado com sucesso!",
+                sucesso = true
             });
         }
 
