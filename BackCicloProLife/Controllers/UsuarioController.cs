@@ -75,6 +75,9 @@ namespace BackCicloProLife.Controllers
                 Path = "/"
             });
 
+            HttpContext.Session.SetString("IdLogado", usuario.IdUsuario.ToString());
+            HttpContext.Session.SetString("EmailLogin", usuario.Email);
+
             return Ok(new
             {
                 mensagem = usuario.Nome,
@@ -87,12 +90,39 @@ namespace BackCicloProLife.Controllers
         [HttpGet("inicial")]
         public IActionResult Inicial()
         {
-            var usuarioSessao = HttpContext.Session.GetString("EmailLogin");
-            if (string.IsNullOrEmpty(usuarioSessao))
+            var idCookie = Request.Cookies["IdLogado"];
+
+            if (string.IsNullOrEmpty(idCookie))
             {
-                return Unauthorized("Usuário não está logado!");
+                return Unauthorized(new
+                {
+                    mensagem = "Usuário não está logado!",
+                    sucesso = false
+                });
             }
-            return Ok(new { mensagem = "Usuário logado", email = usuarioSessao });
+
+            int idUsuario = int.Parse(idCookie);
+
+            var usuario = _context.usuario
+                .FirstOrDefault(u => u.IdUsuario == idUsuario);
+
+            if (usuario == null)
+            {
+                return NotFound(new
+                {
+                    mensagem = "Usuário não encontrado.",
+                    sucesso = false
+                });
+            }
+
+            return Ok(new
+            {
+                mensagem = "Usuário logado",
+                nome = usuario.Nome,
+                email = usuario.Email,
+                cargo = usuario.Cargo,
+                sucesso = true
+            });
         }
 
         // BUSCAR DADOS DO PERFIL LOGADO
@@ -110,16 +140,10 @@ namespace BackCicloProLife.Controllers
                 });
             }
 
-            if (!int.TryParse(idCookie, out int idUsuario))
-            {
-                return BadRequest(new
-                {
-                    mensagem = "Cookie inválido.",
-                    sucesso = false
-                });
-            }
+            int idUsuario = int.Parse(idCookie);
 
-            var usuarioBanco = _context.usuario.FirstOrDefault(u => u.IdUsuario == idUsuario);
+            var usuarioBanco = _context.usuario
+                .FirstOrDefault(u => u.IdUsuario == idUsuario);
 
             if (usuarioBanco == null)
             {
@@ -141,7 +165,7 @@ namespace BackCicloProLife.Controllers
 
         // ALTERAR PERFIL
         [HttpPut("alterarPerfil")]
-        public IActionResult AtualizarPerfil([FromBody] Usuario usuarioAtualizado)
+        public IActionResult AtualizarPerfil([FromBody] AtualizarPerfil usuarioAtualizado)
         {
             var idCookie = Request.Cookies["IdLogado"];
 
@@ -154,14 +178,7 @@ namespace BackCicloProLife.Controllers
                 });
             }
 
-            if (!int.TryParse(idCookie, out int idUsuario))
-            {
-                return BadRequest(new
-                {
-                    mensagem = "Cookie inválido.",
-                    sucesso = false
-                });
-            }
+            int idUsuario = int.Parse(idCookie);
 
             var usuarioBanco = _context.usuario
                 .FirstOrDefault(u => u.IdUsuario == idUsuario);
@@ -189,16 +206,24 @@ namespace BackCicloProLife.Controllers
         }
 
         // LOGOUT
-        [HttpGet("logout")]
+        [HttpPost("logout")]
         public IActionResult Logout()
         {
+            HttpContext.Session.Clear();
+
             Response.Cookies.Delete("IdLogado", new CookieOptions
             {
-                Secure = false,
-                SameSite = SameSiteMode.Lax,
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
                 Path = "/"
             });
-            return Ok(new { mensagem = "Logout realizado com sucesso!", sucesso = true });
+
+            return Ok(new
+            {
+                mensagem = "Logout realizado com sucesso!",
+                sucesso = true
+            });
         }
 
         // DELETAR
@@ -206,7 +231,8 @@ namespace BackCicloProLife.Controllers
         public IActionResult DeletarUsuario(int id)
         {
             var sessao = HttpContext.Session.GetString("IdLogado");
-            if (sessao == null)
+
+            if (string.IsNullOrEmpty(sessao))
             {
                 return Unauthorized("Realize o login para continuar.");
             }
