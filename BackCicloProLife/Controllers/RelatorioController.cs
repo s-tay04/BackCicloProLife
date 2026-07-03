@@ -1,61 +1,115 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using OfficeOpenXml;
-using BackCicloProLife.Data;
+﻿using BackCicloProLife.Data;
 using BackCicloProLife.Models;
-using System.ComponentModel;
+using Microsoft.AspNetCore.Mvc;
 
-[ApiController]
-[Route("[controller]")]
-public class RelatorioController : ControllerBase
+namespace BackCicloProLife.Controllers
 {
-    private readonly Context _context;
-
-    public RelatorioController(Context context)
+    [ApiController]
+    [Route("[controller]")]
+    public class RelatorioController : ControllerBase
     {
-        _context = context;
-        OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-    }
+        private readonly Context _context;
+        private readonly IWebHostEnvironment _env;
 
-    [HttpPost("upload")]
-    public IActionResult UploadRelatorio(IFormFile file)
-    {
-        if (file == null || file.Length == 0) return BadRequest("Arquivo inválido.");
-
-        using (var stream = new MemoryStream())
+        public RelatorioController(Context context, IWebHostEnvironment env)
         {
-            file.CopyTo(stream);
-            using (var package = new ExcelPackage(stream))
+            _context = context;
+            _env = env;
+        }
+
+        // UPLOAD
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadRelatorio(IFormFile file)
+        {
+            try
             {
-                var worksheet = package.Workbook.Worksheets[0];
-                var rowCount = worksheet.Dimension.Rows;
+                if (file == null || file.Length == 0)
+                    return BadRequest("Arquivo inválido.");
 
-                for (int row = 2; row <= rowCount; row++)
+                string pasta = Path.Combine(
+                    _env.ContentRootPath,
+                    "Uploads"
+                );
+
+                if (!Directory.Exists(pasta))
+                    Directory.CreateDirectory(pasta);
+
+                string nomeArquivo =
+                    $"{Guid.NewGuid()}_{file.FileName}";
+
+                string caminhoCompleto =
+                    Path.Combine(pasta, nomeArquivo);
+
+                using (var stream =
+                    new FileStream(caminhoCompleto, FileMode.Create))
                 {
-                    // O ?. e o ?? "" garantem que se a célula estiver vazia, ela vira um texto vazio em vez de crashar
-                    string nomeReceita = worksheet.Cells[row, 1].Value?.ToString() ?? "";
-                    string qtdTexto = worksheet.Cells[row, 2].Value?.ToString() ?? "0";
-                    string totalTexto = worksheet.Cells[row, 3].Value?.ToString() ?? "0";
-
-                    int quantidade = int.Parse(qtdTexto);
-                    decimal total = decimal.Parse(totalTexto);
-
-                    var receita = _context.receita.FirstOrDefault(r => r.Titulo == nomeReceita);
-
-                    if (receita != null)
-                    {
-                        var novaVenda = new Venda
-                        {
-                            Data = DateOnly.FromDateTime(DateTime.Now),
-                            Quantidade = quantidade,
-                            TotalDiario = total,
-                            FkReceita = receita.IdReceita
-                        };
-                        _context.venda.Add(novaVenda);
-                    }
+                    await file.CopyToAsync(stream);
                 }
-                _context.SaveChanges();
+
+                Relatorio relatorio = new Relatorio
+                {
+                    NomeArquivo = file.FileName,
+                    CaminhoArquivo = nomeArquivo,
+                    DataUpload = DateTime.Now
+                };
+
+                _context.relatorio.Add(relatorio);
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    mensagem = "Relatório enviado com sucesso!"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
-        return Ok("Dados importados com sucesso!");
+
+        // LISTAR
+        [HttpGet("listar")]
+        public IActionResult ListarRelatorios(
+            string ordem = "desc"
+        )
+        {
+            var relatorios = ordem == "asc"
+                ? _context.relatorio
+                    .OrderBy(r => r.DataUpload)
+                    .ToList()
+                : _context.relatorio
+                    .OrderByDescending(r => r.DataUpload)
+                    .ToList();
+
+            return Ok(relatorios);
+        }
+
+        // DOWNLOAD
+        [HttpGet("download/{id}")]
+        public IActionResult DownloadRelatorio(int id)
+        {
+            var relatorio = _context.relatorio
+                .FirstOrDefault(r =>
+                    r.IdRelatorio == id
+                );
+
+            if (relatorio == null)
+                return NotFound();
+
+            string caminho = Path.Combine(
+                _env.ContentRootPath,
+                "Uploads",
+                relatorio.CaminhoArquivo
+            );
+
+            var bytes = System.IO.File.ReadAllBytes(caminho);
+
+            return File(
+                bytes,
+                "application/octet-stream",
+                relatorio.NomeArquivo
+            );
+        }
     }
 }
