@@ -22,14 +22,14 @@ namespace BackCicloProLife.Controllers
         [HttpPost("cadastrar")]
         public IActionResult CadastrarReceita(Models.Receita receita)
         {
-            var sessao = HttpContext.Session.GetString("IdLogado");
+            var cookie = Request.Cookies["IdLogado"];
 
-            if (sessao == null)
+            if (cookie == null)
             {
                 return Unauthorized("Faça login para cadastrar uma receita.");
             }
 
-            var idUsuario = Convert.ToInt32(sessao);
+            var idUsuario = Convert.ToInt32(cookie);
 
             receita.FkUsuarioColaborador = idUsuario;
 
@@ -41,7 +41,10 @@ namespace BackCicloProLife.Controllers
                 var nomeArquivo = Guid.NewGuid().ToString() +
                                   Path.GetExtension(receita.ArquivoImagem.FileName);
 
-                var pasta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+                var pasta = Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "wwwroot/uploads"
+                );
 
                 if (!Directory.Exists(pasta))
                     Directory.CreateDirectory(pasta);
@@ -50,13 +53,14 @@ namespace BackCicloProLife.Controllers
 
                 using (var stream = new FileStream(caminho, FileMode.Create))
                 {
-                receita.ArquivoImagem.CopyToAsync(stream);
+                    receita.ArquivoImagem.CopyToAsync(stream);
                 }
 
                 receita.Imagem = nomeArquivo;
             }
 
             _context.receita.Add(receita);
+
             _context.SaveChanges();
 
             return Created("", receita);
