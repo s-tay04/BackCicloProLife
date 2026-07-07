@@ -1,9 +1,10 @@
-﻿using Azure.Core;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BackCicloProLife.Data;
 using BackCicloProLife.Models;
 using Microsoft.AspNetCore.Http;
+using BackCicloProLife.DTOs;
+using System.Text.Json;
 
 namespace BackCicloProLife.Controllers
 {
@@ -20,50 +21,114 @@ namespace BackCicloProLife.Controllers
 
         // CADASTRAR
         [HttpPost("cadastrar")]
-        public IActionResult CadastrarReceita(Models.Receita receita)
+        public IActionResult CadastrarReceita([FromForm] ReceitaCadastroDTO dto)
         {
-            var cookie = Request.Cookies["IdLogado"];
-
-            if (cookie == null)
+            try
             {
-                return Unauthorized("Faça login para cadastrar uma receita.");
-            }
+                var cookie = Request.Cookies["IdLogado"];
 
-            var idUsuario = Convert.ToInt32(cookie);
-
-            receita.FkUsuarioColaborador = idUsuario;
-
-            receita.DataCadastro = DateTime.Now;
-            receita.Status = "Pendente";
-
-            if (receita.ArquivoImagem != null)
-            {
-                var nomeArquivo = Guid.NewGuid().ToString() +
-                                  Path.GetExtension(receita.ArquivoImagem.FileName);
-
-                var pasta = Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    "wwwroot/uploads"
-                );
-
-                if (!Directory.Exists(pasta))
-                    Directory.CreateDirectory(pasta);
-
-                var caminho = Path.Combine(pasta, nomeArquivo);
-
-                using (var stream = new FileStream(caminho, FileMode.Create))
+                if (cookie == null)
                 {
-                    receita.ArquivoImagem.CopyToAsync(stream);
+                    return Unauthorized("Faça login para cadastrar uma receita.");
                 }
 
-                receita.Imagem = nomeArquivo;
+                var idUsuario = Convert.ToInt32(cookie);
+
+                var receita = new Receita
+                {
+                    Titulo = dto.Titulo,
+                    Custo = dto.Custo,
+                    ModoPreparo = dto.ModoPreparo,
+                    Porcao = dto.Porcao,
+                    FkUsuarioColaborador = idUsuario,
+                    DataCadastro = DateTime.Now,
+                    Status = "Pendente"
+                };
+
+                // Salvar imagem
+                if (dto.ArquivoImagem != null)
+                {
+                    var nomeArquivo = Guid.NewGuid().ToString() +
+                                      Path.GetExtension(dto.ArquivoImagem.FileName);
+
+                    var pasta = Path.Combine(
+                        Directory.GetCurrentDirectory(),
+                        "wwwroot/uploads");
+
+                    if (!Directory.Exists(pasta))
+                        Directory.CreateDirectory(pasta);
+
+                    var caminho = Path.Combine(pasta, nomeArquivo);
+
+                    using (var stream = new FileStream(caminho, FileMode.Create))
+                    {
+                        dto.ArquivoImagem.CopyTo(stream);
+                    }
+
+                    receita.Imagem = nomeArquivo;
+                }
+
+                // Salva a receita
+                _context.receita.Add(receita);
+                _context.SaveChanges();
+
+                // Converte os ingredientes
+                var ingredientes = JsonSerializer.Deserialize<List<IngredienteDTO>>(dto.Ingredientes);
+
+                if (ingredientes == null || ingredientes.Count == 0)
+                {
+                    return Created("", receita);
+                }
+
+                foreach (var item in ingredientes)
+                {
+                    if (string.IsNullOrWhiteSpace(item.Nome))
+                        continue;
+
+                    // Procura ingrediente existente
+                    var ingrediente = _context.ingrediente.FirstOrDefault(i =>
+                        i.NomeIngrediente.ToLower().Trim() == item.Nome.ToLower().Trim());
+
+                    // Se não existir, cria
+                    if (ingrediente == null)
+                    {
+                        ingrediente = new Ingrediente
+                        {
+                            NomeIngrediente = item.Nome.Trim(),
+                            UnidadeFornecimento = item.Unidade
+                        };
+
+                        _context.ingrediente.Add(ingrediente);
+                        _context.SaveChanges();
+                    }
+
+                    // Verifica no BANCO
+                    var existe = _context.ingredienteReceita.AsNoTracking().Any(ir =>
+                        ir.FkIngrediente == ingrediente.IdIngrediente &&
+                        ir.FkReceita == receita.IdReceita);
+
+                    if (!existe)
+                    {
+                        var ingredienteReceita = new IngredienteReceita
+                        {
+                            FkIngrediente = ingrediente.IdIngrediente,
+                            FkReceita = receita.IdReceita,
+                            Quantidade = item.Quantidade,
+                            Unidade = item.Unidade
+                        };
+
+                        _context.ingredienteReceita.Add(ingredienteReceita);
+                    }
+                }
+
+                _context.SaveChanges();
+
+                return Created("", receita);
             }
-
-            _context.receita.Add(receita);
-
-            _context.SaveChanges();
-
-            return Created("", receita);
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
 
         // ATUALIZAR

@@ -15,5 +15,8 @@ namespace BackCicloProLife.Models
 
         [Column("quantidade")]
         public decimal Quantidade { get; set; }
+
+        [Column("unidade")]
+        public string Unidade { get; set; } = string.Empty;
     }
 }
