@@ -111,5 +111,38 @@ namespace BackCicloProLife.Controllers
                 relatorio.NomeArquivo
             );
         }
+        // DELETAR
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletarRelatorio(int id)
+        {
+            var relatorio = _context.relatorio
+                .FirstOrDefault(r => r.IdRelatorio == id);
+
+            if (relatorio == null)
+                return NotFound("Relatório não encontrado.");
+
+            // caminho do arquivo físico
+            string caminho = Path.Combine(
+                _env.ContentRootPath,
+                "Uploads",
+                relatorio.CaminhoArquivo
+            );
+
+            // remove o arquivo da pasta Uploads
+            if (System.IO.File.Exists(caminho))
+            {
+                System.IO.File.Delete(caminho);
+            }
+
+            // remove do banco
+            _context.relatorio.Remove(relatorio);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                mensagem = "Relatório excluído com sucesso!"
+            });
+        }
     }
 }
