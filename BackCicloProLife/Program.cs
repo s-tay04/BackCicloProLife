@@ -23,7 +23,9 @@ builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
+
     options.Cookie.HttpOnly = true;
+
     options.Cookie.IsEssential = true;
 });
 
@@ -36,13 +38,15 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<Context>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")
-    ));
+    )
+);
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
+
     app.UseSwaggerUI();
 }
 
@@ -51,6 +55,8 @@ app.UseHttpsRedirection();
 app.UseCors("PermitirTudo");
 
 app.UseSession();
+
+app.UseStaticFiles();
 
 app.UseAuthorization();
 

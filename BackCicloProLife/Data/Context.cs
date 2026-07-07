@@ -12,5 +12,6 @@ namespace BackCicloProLife.Data
         public DbSet<Venda> venda { get; set; }
         public DbSet<Ingrediente> ingrediente { get; set; }
         public DbSet<IngredienteReceita> ingredienteReceita { get; set; }
+        public DbSet<Relatorio> relatorio { get; set; }
     }
 }
