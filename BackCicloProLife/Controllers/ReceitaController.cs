@@ -171,5 +171,38 @@ namespace BackCicloProLife.Controllers
                 return StatusCode(500, $"Erro interno ao buscar receitas: {ex.Message}");
             }
         }
+
+        //Aprovar Receita
+        [HttpPut("aprovar/{id}")]
+        public IActionResult AprovarReceita(int id)
+        {
+            var receita = _context.receita.Find(id);
+
+            if (receita == null)
+            {
+                return NotFound("Receita não encontrada.");
+            }
+
+            receita.Status = "Aprovada";
+            _context.SaveChanges();
+            return Ok ("Receita aprovada com sucesso.");
+        }
+
+        // REPROVAR RECEITA
+        [HttpDelete("reprovar/{id}")]
+        public IActionResult ReprovarReceita(int id)
+        {
+            var receita = _context.receita.Find(id);
+
+            if (receita == null)
+            {
+                return NotFound("Receita não encontrada.");
+            }
+
+            _context.receita.Remove(receita);
+            _context.SaveChanges();
+
+            return Ok("Receita reprovada e deletada com sucesso.");
+        }
     }
 }
