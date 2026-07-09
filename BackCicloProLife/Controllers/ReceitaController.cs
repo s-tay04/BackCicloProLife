@@ -75,6 +75,15 @@ namespace BackCicloProLife.Controllers
                 // Converte os ingredientes
                 var ingredientes = JsonSerializer.Deserialize<List<IngredienteDTO>>(dto.Ingredientes);
 
+                Console.WriteLine("Quantidade de ingredientes: " + ingredientes.Count);
+
+                foreach (var item in ingredientes)
+                {
+                    Console.WriteLine("Nome: " + item.Nome);
+                    Console.WriteLine("Quantidade: " + item.Quantidade);
+                    Console.WriteLine("Unidade: " + item.Unidade);
+                }
+
                 if (ingredientes == null || ingredientes.Count == 0)
                 {
                     return Created("", receita);
@@ -82,43 +91,21 @@ namespace BackCicloProLife.Controllers
 
                 foreach (var item in ingredientes)
                 {
-                    if (string.IsNullOrWhiteSpace(item.Nome))
-                        continue;
+                    Console.WriteLine("Entrou no foreach");
 
-                    // Procura ingrediente existente
-                    var ingrediente = _context.ingrediente.FirstOrDefault(i =>
-                        i.NomeIngrediente.ToLower().Trim() == item.Nome.ToLower().Trim());
-
-                    // Se não existir, cria
-                    if (ingrediente == null)
+                    var ingrediente = new Ingrediente
                     {
-                        ingrediente = new Ingrediente
-                        {
-                            NomeIngrediente = item.Nome.Trim(),
-                            UnidadeFornecimento = item.Unidade
-                        };
+                        NomeIngrediente = item.Nome,
+                        UnidadeFornecimento = item.Unidade
+                    };
 
-                        _context.ingrediente.Add(ingrediente);
-                        _context.SaveChanges();
-                    }
+                    _context.ingrediente.Add(ingrediente);
 
-                    // Verifica no BANCO
-                    var existe = _context.ingredienteReceita.AsNoTracking().Any(ir =>
-                        ir.FkIngrediente == ingrediente.IdIngrediente &&
-                        ir.FkReceita == receita.IdReceita);
+                    Console.WriteLine(_context.ChangeTracker.DebugView.ShortView);
 
-                    if (!existe)
-                    {
-                        var ingredienteReceita = new IngredienteReceita
-                        {
-                            FkIngrediente = ingrediente.IdIngrediente,
-                            FkReceita = receita.IdReceita,
-                            Quantidade = item.Quantidade,
-                            Unidade = item.Unidade
-                        };
+                    _context.SaveChanges();
 
-                        _context.ingredienteReceita.Add(ingredienteReceita);
-                    }
+                    Console.WriteLine("Ingrediente salvo");
                 }
 
                 _context.SaveChanges();
