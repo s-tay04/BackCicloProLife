@@ -227,25 +227,53 @@ namespace BackCicloProLife.Controllers
         }
 
         // DELETAR
-        [HttpDelete("delete/{id}")]
-        public IActionResult DeletarUsuario(int id)
+        [HttpDelete("excluir")]
+        public IActionResult ExcluirConta()
         {
-            var sessao = HttpContext.Session.GetString("IdLogado");
+            var idCookie = Request.Cookies["IdLogado"];
 
-            if (string.IsNullOrEmpty(sessao))
+            if (string.IsNullOrEmpty(idCookie))
             {
-                return Unauthorized("Realize o login para continuar.");
+                return Unauthorized(new
+                {
+                    mensagem = "Usuário não está logado.",
+                    sucesso = false
+                });
             }
 
-            var usuarioBanco = _context.usuario.Find(id);
+            int idUsuario = int.Parse(idCookie);
+
+            var usuarioBanco = _context.usuario
+                .FirstOrDefault(u => u.IdUsuario == idUsuario);
 
             if (usuarioBanco == null)
-                return NotFound("Usuário não encontrado.");
+            {
+                return NotFound(new
+                {
+                    mensagem = "Usuário não encontrado.",
+                    sucesso = false
+                });
+            }
 
             _context.usuario.Remove(usuarioBanco);
+
             _context.SaveChanges();
 
-            return Ok("Usuário deletado!");
+            HttpContext.Session.Clear();
+
+            Response.Cookies.Delete("IdLogado", new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Path = "/"
+            });
+
+            return Ok(new
+            {
+                mensagem = "Conta excluída com sucesso!",
+                sucesso = true
+            });
         }
     }
 
