@@ -42,7 +42,8 @@ namespace BackCicloProLife.Controllers
                     Porcao = dto.Porcao,
                     FkUsuarioColaborador = idUsuario,
                     DataCadastro = DateTime.Now,
-                    Status = "Pendente"
+                    Status = "Pendente",
+                    FeedbackChefe = ""
                 };
 
                 // Salvar imagem
@@ -228,7 +229,19 @@ namespace BackCicloProLife.Controllers
             }
         }
 
-        //Aprovar Receita
+        // BUSCAR UMA RECEITA
+        [HttpGet("{id}")]
+        public IActionResult BuscarReceita(int id)
+        {
+            var receita = _context.receita.FirstOrDefault(r => r.IdReceita == id);
+
+            if (receita == null)
+                return NotFound("Receita não encontrada.");
+
+            return Ok(receita);
+        }
+
+        // Aprovar Receita
         [HttpPut("aprovar/{id}")]
         public IActionResult AprovarReceita(int id)
         {
@@ -239,13 +252,15 @@ namespace BackCicloProLife.Controllers
                 return NotFound("Receita não encontrada.");
             }
 
-            receita.Status = "Aprovada";
+            receita.Status = "Chefe";
+
             _context.SaveChanges();
-            return Ok ("Receita aprovada com sucesso.");
+
+            return Ok("Receita enviada para o chefe.");
         }
 
         // REPROVAR RECEITA
-        [HttpDelete("reprovar/{id}")]
+        [HttpPut("reprovar/{id}")]
         public IActionResult ReprovarReceita(int id)
         {
             var receita = _context.receita.Find(id);
@@ -255,10 +270,34 @@ namespace BackCicloProLife.Controllers
                 return NotFound("Receita não encontrada.");
             }
 
-            _context.receita.Remove(receita);
+            receita.Status = "Reprovada";
+
             _context.SaveChanges();
 
-            return Ok("Receita reprovada e deletada com sucesso.");
+            return Ok("Receita reprovada.");
+        }
+
+        // FEEDBACK DO CHEFE
+        [HttpPut("feedback/{id}")]
+        public IActionResult FeedbackReceita(int id, [FromBody] FeedbackDTO dto)
+        {
+            var receita = _context.receita.FirstOrDefault(r => r.IdReceita == id);
+
+            if (receita == null)
+                return NotFound("Receita não encontrada.");
+
+            // Salva o feedback do chefe
+            receita.FeedbackChefe = dto.FeedbackChefe;
+
+            // Envia automaticamente para o gestor
+            receita.Status = "Gestor";
+
+            _context.SaveChanges();
+
+            return Ok(new
+            {
+                mensagem = "Feedback enviado para o gestor com sucesso!"
+            });
         }
     }
 }
