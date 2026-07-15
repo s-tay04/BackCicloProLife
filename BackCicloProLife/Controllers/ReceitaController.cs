@@ -73,17 +73,15 @@ namespace BackCicloProLife.Controllers
                 _context.receita.Add(receita);
                 _context.SaveChanges();
 
-                // Converte os ingredientes
-                var ingredientes = JsonSerializer.Deserialize<List<IngredienteDTO>>(dto.Ingredientes);
+                Console.WriteLine("JSON recebido:");
+                Console.WriteLine(dto.Ingredientes);
 
-                Console.WriteLine("Quantidade de ingredientes: " + ingredientes.Count);
-
-                foreach (var item in ingredientes)
-                {
-                    Console.WriteLine("Nome: " + item.Nome);
-                    Console.WriteLine("Quantidade: " + item.Quantidade);
-                    Console.WriteLine("Unidade: " + item.Unidade);
-                }
+                var ingredientes = JsonSerializer.Deserialize<List<IngredienteDTO>>(
+                    dto.Ingredientes,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
 
                 if (ingredientes == null || ingredientes.Count == 0)
                 {
@@ -92,30 +90,39 @@ namespace BackCicloProLife.Controllers
 
                 foreach (var item in ingredientes)
                 {
-                    Console.WriteLine("Entrou no foreach");
+                    Console.WriteLine($"ID: {item.IdIngrediente}");
+                    Console.WriteLine($"Quantidade: {item.Quantidade}");
+                    Console.WriteLine($"Unidade: {item.Unidade}");
 
-                    var ingrediente = new Ingrediente
+                    var ingrediente = _context.ingrediente
+                        .FirstOrDefault(i => i.IdIngrediente == item.IdIngrediente);
+
+                    if (ingrediente == null)
                     {
-                        NomeIngrediente = item.Nome,
-                        UnidadeFornecimento = item.Unidade
+                        return BadRequest($"Ingrediente com ID {item.IdIngrediente} não encontrado.");
+                    }
+
+                    var ingredienteReceita = new IngredienteReceita
+                    {
+                        FkIngrediente = ingrediente.IdIngrediente,
+                        FkReceita = receita.IdReceita,
+                        Quantidade = Convert.ToDecimal(item.Quantidade),
+                        Unidade = item.Unidade
                     };
 
-                    _context.ingrediente.Add(ingrediente);
-
-                    Console.WriteLine(_context.ChangeTracker.DebugView.ShortView);
-
-                    _context.SaveChanges();
-
-                    Console.WriteLine("Ingrediente salvo");
+                    _context.ingredienteReceita.Add(ingredienteReceita);
                 }
 
                 _context.SaveChanges();
+
+                Console.WriteLine(dto.Ingredientes);
 
                 return Created("", receita);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                Console.WriteLine(ex.ToString());
+                return StatusCode(500, ex.ToString());
             }
         }
 

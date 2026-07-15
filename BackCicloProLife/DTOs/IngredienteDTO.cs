@@ -2,10 +2,10 @@
 {
     public class IngredienteDTO
     {
-        public string Nome { get; set; } = string.Empty;
-
-        public string Unidade { get; set; } = string.Empty;
+        public int IdIngrediente { get; set; }
 
         public decimal Quantidade { get; set; }
+
+        public string Unidade { get; set; } = string.Empty;
     }
 }

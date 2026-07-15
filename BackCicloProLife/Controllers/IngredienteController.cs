@@ -20,8 +20,9 @@ namespace BackCicloProLife.Controllers
         [HttpPost("cadastrar")]
         public IActionResult CadastrarIngrediente(Ingrediente ingrediente)
         {
-            var sessao = HttpContext.Session.GetString("IdLogado");
-            if (sessao == null)
+            var cookie = Request.Cookies["IdLogado"];
+
+            if (cookie == null)
             {
                 return Unauthorized("Realize login para continuar."); //Verifica se o usuario esta logado, caso não esteja, ele não pode cadastrar o ingrediente
             }
@@ -36,6 +37,15 @@ namespace BackCicloProLife.Controllers
                 return BadRequest("A unidade de fornecimento é obrigatória.");
             }
 
+            var existe = _context.ingrediente.Any(i =>
+                i.NomeIngrediente.ToLower() ==
+                ingrediente.NomeIngrediente.ToLower());
+
+            if (existe)
+            {
+                return BadRequest("Esse ingrediente já está cadastrado.");
+            }
+
             _context.ingrediente.Add(ingrediente);
             _context.SaveChanges();
 
@@ -44,22 +54,32 @@ namespace BackCicloProLife.Controllers
 
         //Buscar ingredientes
         [HttpGet("buscar")]
-        public IActionResult BuscarIngredientes([FromQuery] string? nome) //permite que o usuario busque o ingrediente pelo nome
+        public IActionResult BuscarIngredientes([FromQuery] string? nome)
         {
-            var sessao = HttpContext.Session.GetString("IdLogado");
+            var cookie = Request.Cookies["IdLogado"];
 
-            if (sessao == null)
+            if (cookie == null)
             {
-                return Unauthorized("Realize login para continuar."); //Verifica se o usuario esta logado, caso não esteja, ele não pode deletar o ingrediente
+                return Unauthorized("Realize login para continuar.");
             }
 
             var query = _context.ingrediente.AsQueryable();
 
-            if (!string.IsNullOrEmpty(nome))
+            if (!string.IsNullOrWhiteSpace(nome))
             {
-                query = query.Where(i => i.NomeIngrediente.Contains(nome));
+                query = query.Where(i =>
+                    i.NomeIngrediente.Contains(nome));
             }
-            var resultado = query.ToList();
+
+            var resultado = query
+                .OrderBy(i => i.NomeIngrediente)
+                .Select(i => new
+                {
+                    i.IdIngrediente,
+                    i.NomeIngrediente
+                })
+                .ToList();
+
             return Ok(resultado);
         }
 
