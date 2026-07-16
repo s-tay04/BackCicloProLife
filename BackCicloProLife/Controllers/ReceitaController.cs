@@ -57,7 +57,9 @@ namespace BackCicloProLife.Controllers
                         "wwwroot/uploads");
 
                     if (!Directory.Exists(pasta))
+                    {
                         Directory.CreateDirectory(pasta);
+                    }
 
                     var caminho = Path.Combine(pasta, nomeArquivo);
 
@@ -73,9 +75,11 @@ namespace BackCicloProLife.Controllers
                 _context.receita.Add(receita);
                 _context.SaveChanges();
 
+                // Apenas para depuração
                 Console.WriteLine("JSON recebido:");
                 Console.WriteLine(dto.Ingredientes);
 
+                // Converte o JSON em lista
                 var ingredientes = JsonSerializer.Deserialize<List<IngredienteDTO>>(
                     dto.Ingredientes,
                     new JsonSerializerOptions
@@ -88,14 +92,16 @@ namespace BackCicloProLife.Controllers
                     return Created("", receita);
                 }
 
+                Console.WriteLine($"Quantidade de ingredientes: {ingredientes.Count}");
+
                 foreach (var item in ingredientes)
                 {
                     Console.WriteLine($"ID: {item.IdIngrediente}");
                     Console.WriteLine($"Quantidade: {item.Quantidade}");
                     Console.WriteLine($"Unidade: {item.Unidade}");
 
-                    var ingrediente = _context.ingrediente
-                        .FirstOrDefault(i => i.IdIngrediente == item.IdIngrediente);
+                    var ingrediente = _context.ingrediente.FirstOrDefault(i =>
+                        i.IdIngrediente == item.IdIngrediente);
 
                     if (ingrediente == null)
                     {
@@ -104,9 +110,9 @@ namespace BackCicloProLife.Controllers
 
                     var ingredienteReceita = new IngredienteReceita
                     {
-                        FkIngrediente = ingrediente.IdIngrediente,
+                        FkIngrediente = item.IdIngrediente,
                         FkReceita = receita.IdReceita,
-                        Quantidade = Convert.ToDecimal(item.Quantidade),
+                        Quantidade = item.Quantidade,
                         Unidade = item.Unidade
                     };
 
@@ -114,8 +120,6 @@ namespace BackCicloProLife.Controllers
                 }
 
                 _context.SaveChanges();
-
-                Console.WriteLine(dto.Ingredientes);
 
                 return Created("", receita);
             }

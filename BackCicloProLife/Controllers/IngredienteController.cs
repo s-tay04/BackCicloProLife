@@ -18,28 +18,23 @@ namespace BackCicloProLife.Controllers
 
         //Cadastrar ingrediente
         [HttpPost("cadastrar")]
-        public IActionResult CadastrarIngrediente(Ingrediente ingrediente)
+        public IActionResult CadastrarIngrediente([FromBody] Ingrediente ingrediente)
         {
             var cookie = Request.Cookies["IdLogado"];
 
             if (cookie == null)
             {
-                return Unauthorized("Realize login para continuar."); //Verifica se o usuario esta logado, caso não esteja, ele não pode cadastrar o ingrediente
+                return Unauthorized("Realize login para continuar.");
             }
 
             if (string.IsNullOrWhiteSpace(ingrediente.NomeIngrediente))
             {
-                return BadRequest("O nome do ingrediente é obrigatório."); //Verifica se o espaço está preenchido
-            }
-
-            if (string.IsNullOrWhiteSpace(ingrediente.UnidadeFornecimento))
-            {
-                return BadRequest("A unidade de fornecimento é obrigatória.");
+                return BadRequest("O nome do ingrediente é obrigatório.");
             }
 
             var existe = _context.ingrediente.Any(i =>
-                i.NomeIngrediente.ToLower() ==
-                ingrediente.NomeIngrediente.ToLower());
+                i.NomeIngrediente.ToLower().Trim() ==
+                ingrediente.NomeIngrediente.ToLower().Trim());
 
             if (existe)
             {
@@ -83,18 +78,19 @@ namespace BackCicloProLife.Controllers
             return Ok(resultado);
         }
 
-        //Atualizar ingrediente
+        // Atualizar ingrediente
         [HttpPut("atualizar")]
-        public IActionResult AtualizarIngrediente(int id, Ingrediente ingrediente) //Permite atulizar (só é possivel quando o usuario esta logado)
+        public IActionResult AtualizarIngrediente(int id, Ingrediente ingrediente)
         {
-            var sessao = HttpContext.Session.GetString("IdLogado");
+            var cookie = Request.Cookies["IdLogado"];
 
-            if (sessao == null)
+            if (cookie == null)
             {
-                return Unauthorized("Usuário não logado."); 
+                return Unauthorized("Usuário não logado.");
             }
 
-            var ingredienteDoBanco = _context.ingrediente.Find(id); //procura o ingrediente pelo id
+            var ingredienteDoBanco = _context.ingrediente.Find(id);
+
             if (ingredienteDoBanco == null)
             {
                 return NotFound("Ingrediente não encontrado.");
@@ -105,20 +101,14 @@ namespace BackCicloProLife.Controllers
                 return BadRequest("O nome do ingrediente é obrigatório.");
             }
 
-            if (string.IsNullOrWhiteSpace(ingrediente.UnidadeFornecimento))
-            {
-                return BadRequest("A unidade de fornecimento é obrigatória.");
-            }
-
             ingredienteDoBanco.NomeIngrediente = ingrediente.NomeIngrediente;
-            ingredienteDoBanco.UnidadeFornecimento = ingrediente.UnidadeFornecimento;
 
             _context.SaveChanges();
 
             return Ok("Ingrediente atualizado com sucesso.");
         }
 
-        
+
         //Deletar ingrediente
         [HttpDelete("deletar/{id}")]
         public IActionResult DeletarIngredientes(int id)

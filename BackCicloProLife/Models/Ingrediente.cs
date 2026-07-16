@@ -12,8 +12,5 @@ namespace BackCicloProLife.Models
 
         [Column("nomeIngrediente")]
         public string NomeIngrediente { get; set; } = string.Empty;
-
-        [Column("unidadeFornecimento")]
-        public string UnidadeFornecimento { get; set; } = string.Empty;
     }
 }
