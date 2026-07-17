@@ -45,5 +45,8 @@ namespace BackCicloProLife.Models
 
         [NotMapped]
         public IFormFile? ArquivoImagem { get; set; }
+
+        public virtual ICollection<IngredienteReceita> IngredientesReceita { get; set; }
+            = new List<IngredienteReceita>();
     }
 }

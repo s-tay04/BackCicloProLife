@@ -75,7 +75,6 @@ namespace BackCicloProLife.Controllers
                 _context.receita.Add(receita);
                 _context.SaveChanges();
 
-                // Apenas para depuração
                 Console.WriteLine("JSON recebido:");
                 Console.WriteLine(dto.Ingredientes);
 
@@ -89,7 +88,14 @@ namespace BackCicloProLife.Controllers
 
                 if (ingredientes == null || ingredientes.Count == 0)
                 {
-                    return Created("", receita);
+                    return Created("", new
+                    {
+                        receita.IdReceita,
+                        receita.Titulo,
+                        receita.Status,
+                        receita.Imagem,
+                        mensagem = "Receita cadastrada com sucesso!"
+                    });
                 }
 
                 Console.WriteLine($"Quantidade de ingredientes: {ingredientes.Count}");
@@ -121,7 +127,14 @@ namespace BackCicloProLife.Controllers
 
                 _context.SaveChanges();
 
-                return Created("", receita);
+                return Created("", new
+                {
+                    receita.IdReceita,
+                    receita.Titulo,
+                    receita.Status,
+                    receita.Imagem,
+                    mensagem = "Receita cadastrada com sucesso!"
+                });
             }
             catch (Exception ex)
             {
@@ -131,8 +144,8 @@ namespace BackCicloProLife.Controllers
         }
 
         // ATUALIZAR
-        [HttpPut("atualizar")]
-        public IActionResult AtualizarReceita(int id, Models.Receita receita)
+        [HttpPut("atualizar/{id}")]
+        public IActionResult AtualizarReceita(int id, Receita receita)
         {
             var sessao = HttpContext.Session.GetString("IdLogado");
             if (sessao == null)
@@ -202,90 +215,177 @@ namespace BackCicloProLife.Controllers
         public IActionResult BuscarReceitas([FromQuery] string? nome)
         {
             var sessaoUsuario = HttpContext.Session.GetString("IdLogado");
+
             if (sessaoUsuario == null)
             {
                 return Unauthorized("Faça login antes.");
             }
 
-            var query = _context.receita.AsQueryable();
+            var query = _context.receita
+                .Where(r => r.Status == "Aprovada");
 
             if (!string.IsNullOrEmpty(nome))
             {
                 query = query.Where(r => r.Titulo.Contains(nome));
             }
 
-            var resultado = query.ToList();
+            var resultado = query
+                .Select(r => new
+                {
+                    r.IdReceita,
+                    r.Titulo,
+                    r.Imagem,
+                    r.Status
+                })
+                .ToList();
 
             return Ok(resultado);
         }
 
         // LISTAR RECEITAS (cards)
-        [HttpGet("listar")]
-        public IActionResult ListarReceitas()
+        // Colaborador
+        [HttpGet("pendentes")]
+        public async Task<IActionResult> ReceitasPendentes()
         {
-            try
-            {
-                var receitas = _context.receita.ToList();
-
-                if (receitas == null || !receitas.Any())
+            var receitas = await _context.receita
+                .Where(r => r.Status == "Pendente")
+                .Select(r => new
                 {
-                    return Ok(new List<Models.Receita>());
-                }
+                    r.IdReceita,
+                    r.Titulo,
+                    r.Imagem,
+                    r.Status,
+                    r.FeedbackChefe,
+                    r.DataCadastro
+                })
+                .ToListAsync();
 
-                return Ok(receitas);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Erro interno ao buscar receitas: {ex.Message}");
-            }
+            return Ok(receitas);
+        }
+
+        // Chef
+        [HttpGet("fase-teste")]
+        public async Task<IActionResult> FaseTeste()
+        {
+            var receitas = await _context.receita
+                .Where(r => r.Status == "Pendente")
+                .Select(r => new
+                {
+                    r.IdReceita,
+                    r.Titulo,
+                    r.Imagem,
+                    r.Status,
+                    r.FeedbackChefe,
+                    r.DataCadastro
+                })
+                .ToListAsync();
+
+            return Ok(receitas);
+        }
+
+        // Gestor
+        [HttpGet("fase-final")]
+        public async Task<IActionResult> FaseFinal()
+        {
+            var receitas = await _context.receita
+                .Where(r => r.Status == "Gestor")
+                .Select(r => new
+                {
+                    r.IdReceita,
+                    r.Titulo,
+                    r.Imagem,
+                    r.Status,
+                    r.FeedbackChefe,
+                    r.DataCadastro
+                })
+                .ToListAsync();
+
+            return Ok(receitas);
+        }
+
+        // Cardápio
+        [HttpGet("cardapio")]
+        public async Task<IActionResult> Cardapio()
+        {
+            var receitas = await _context.receita
+                .Where(r => r.Status == "Aprovada")
+                .Select(r => new
+                {
+                    r.IdReceita,
+                    r.Titulo,
+                    r.Imagem,
+                    r.Status,
+                    r.FeedbackChefe,
+                    r.DataCadastro
+                })
+                .ToListAsync();
+
+            return Ok(receitas);
         }
 
         // BUSCAR UMA RECEITA
         [HttpGet("{id}")]
         public IActionResult BuscarReceita(int id)
         {
-            var receita = _context.receita.FirstOrDefault(r => r.IdReceita == id);
+            var receita = _context.receita
+                .Include(r => r.IngredientesReceita)
+                    .ThenInclude(ir => ir.Ingrediente)
+                .FirstOrDefault(r => r.IdReceita == id);
 
             if (receita == null)
                 return NotFound("Receita não encontrada.");
 
-            return Ok(receita);
+            return Ok(new
+            {
+                receita.IdReceita,
+                receita.Titulo,
+                receita.Imagem,
+                receita.Custo,
+                receita.Porcao,
+                receita.ModoPreparo,
+                receita.Status,
+                receita.FeedbackChefe,
+
+                Ingredientes = receita.IngredientesReceita.Select(ir => new
+                {
+                    ir.Ingrediente.IdIngrediente,
+                    ir.Ingrediente.NomeIngrediente,
+                    ir.Quantidade,
+                    ir.Unidade
+                })
+            });
         }
 
         // Aprovar Receita
-        [HttpPut("aprovar/{id}")]
-        public IActionResult AprovarReceita(int id)
+        [HttpPut("aprovar-final/{id}")]
+        public IActionResult AprovarFinal(int id)
         {
             var receita = _context.receita.Find(id);
 
             if (receita == null)
-            {
-                return NotFound("Receita não encontrada.");
-            }
+                return NotFound();
 
-            receita.Status = "Chefe";
+            receita.Status = "Aprovada";
 
             _context.SaveChanges();
 
-            return Ok("Receita enviada para o chefe.");
+            return Ok();
         }
 
         // REPROVAR RECEITA
-        [HttpPut("reprovar/{id}")]
-        public IActionResult ReprovarReceita(int id)
+        [HttpPut("reprovar-final/{id}")]
+        public IActionResult ReprovarFinal(int id)
         {
             var receita = _context.receita.Find(id);
 
             if (receita == null)
-            {
-                return NotFound("Receita não encontrada.");
-            }
+                return NotFound();
 
             receita.Status = "Reprovada";
 
             _context.SaveChanges();
 
-            return Ok("Receita reprovada.");
+            return Ok();
         }
 
         // FEEDBACK DO CHEFE

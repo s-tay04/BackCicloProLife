@@ -12,5 +12,8 @@ namespace BackCicloProLife.Models
 
         [Column("nomeIngrediente")]
         public string NomeIngrediente { get; set; } = string.Empty;
+
+        public virtual ICollection<IngredienteReceita> IngredientesReceita { get; set; }
+            = new List<IngredienteReceita>();
     }
 }

@@ -18,5 +18,11 @@ namespace BackCicloProLife.Models
 
         [Column("unidade")]
         public string Unidade { get; set; } = string.Empty;
+
+        [ForeignKey(nameof(FkReceita))]
+        public virtual Receita Receita { get; set; } = null!;
+
+        [ForeignKey(nameof(FkIngrediente))]
+        public virtual Ingrediente Ingrediente { get; set; } = null!;
     }
 }
