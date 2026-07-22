@@ -143,6 +143,30 @@ namespace BackCicloProLife.Controllers
             }
         }
 
+        // DESTAQUES
+        [HttpGet("destaques")]
+        public async Task<IActionResult> Destaques()
+        {
+            var receitas = await _context.receita
+                .Where(r => r.Status == "Aprovada")
+                .OrderBy(r => r.Custo) // menor custo primeiro
+                .ThenByDescending(r => r.Porcao) // maior rendimento
+                .ThenByDescending(r => r.DataCadastro) // mais recentes
+                .Take(4)
+                .Select(r => new
+                {
+                    r.IdReceita,
+                    r.Titulo,
+                    r.Imagem,
+                    r.Custo,
+                    r.Porcao,
+                    r.DataCadastro
+                })
+                .ToListAsync();
+
+            return Ok(receitas);
+        }
+
         // ATUALIZAR
         [HttpPut("atualizar/{id}")]
         public IActionResult AtualizarReceita(int id, Receita receita)
@@ -193,8 +217,9 @@ namespace BackCicloProLife.Controllers
         [HttpDelete("delete/{id}")]
         public IActionResult DeletarReceita(int id)
         {
-            var sessao = HttpContext.Session.GetString("IdLogado");
-            if (sessao == null)
+            var cookie = Request.Cookies["IdLogado"];
+
+            if (cookie == null)
             {
                 return Unauthorized("Realize o login para continuar.");
             }
@@ -204,10 +229,20 @@ namespace BackCicloProLife.Controllers
             if (receita == null)
                 return NotFound("Receita não encontrada.");
 
+            var ingredientes = _context.ingredienteReceita
+                .Where(ir => ir.FkReceita == id)
+                .ToList();
+
+            _context.ingredienteReceita.RemoveRange(ingredientes);
+
             _context.receita.Remove(receita);
+
             _context.SaveChanges();
 
-            return Ok("Receita deletada!");
+            return Ok(new
+            {
+                mensagem = "Receita reprovada e removida com sucesso."
+            });
         }
 
         // BUSCAR
@@ -360,12 +395,21 @@ namespace BackCicloProLife.Controllers
         [HttpPut("aprovar-final/{id}")]
         public IActionResult AprovarFinal(int id)
         {
+            var cookie = Request.Cookies["IdLogado"];
+
+            if (cookie == null)
+                return Unauthorized();
+
+            var idGestor = Convert.ToInt32(cookie);
+
             var receita = _context.receita.Find(id);
 
             if (receita == null)
                 return NotFound();
 
             receita.Status = "Aprovada";
+
+            receita.FkUsuarioGestor = idGestor;
 
             _context.SaveChanges();
 
@@ -376,12 +420,20 @@ namespace BackCicloProLife.Controllers
         [HttpPut("reprovar-final/{id}")]
         public IActionResult ReprovarFinal(int id)
         {
+            var cookie = Request.Cookies["IdLogado"];
+
+            if (cookie == null)
+                return Unauthorized();
+
+            var idGestor = Convert.ToInt32(cookie);
+
             var receita = _context.receita.Find(id);
 
             if (receita == null)
                 return NotFound();
 
             receita.Status = "Reprovada";
+            receita.FkUsuarioGestor = idGestor;
 
             _context.SaveChanges();
 
@@ -392,15 +444,22 @@ namespace BackCicloProLife.Controllers
         [HttpPut("feedback/{id}")]
         public IActionResult FeedbackReceita(int id, [FromBody] FeedbackDTO dto)
         {
+            var cookie = Request.Cookies["IdLogado"];
+
+            if (cookie == null)
+                return Unauthorized();
+
+            var idChefe = Convert.ToInt32(cookie);
+
             var receita = _context.receita.FirstOrDefault(r => r.IdReceita == id);
 
             if (receita == null)
                 return NotFound("Receita não encontrada.");
 
-            // Salva o feedback do chefe
             receita.FeedbackChefe = dto.FeedbackChefe;
 
-            // Envia automaticamente para o gestor
+            receita.FkUsuarioChefe = idChefe;
+
             receita.Status = "Gestor";
 
             _context.SaveChanges();
