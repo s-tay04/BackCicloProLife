@@ -391,6 +391,7 @@ namespace BackCicloProLife.Controllers
             });
         }
 
+        
         // Aprovar Receita
         [HttpPut("aprovar-final/{id}")]
         public IActionResult AprovarFinal(int id)
@@ -468,6 +469,21 @@ namespace BackCicloProLife.Controllers
             {
                 mensagem = "Feedback enviado para o gestor com sucesso!"
             });
+
         }
+
+        [HttpGet("filtrar")]
+        public IActionResult Buscar(string titulo)
+        {
+            var receitas = _context.receita
+            .Where(r=> r.Titulo.Contains (titulo))
+            .ToList();
+
+            return Ok(receitas);
+        }
+
     }
+
+   
+    
 }
