@@ -143,6 +143,21 @@ namespace BackCicloProLife.Controllers
             {
                 mensagem = "Relatório excluído com sucesso!"
             });
+
+            
+            }
+
+        // BUSCAR RELATÓRIO
+        [HttpGet("filtrar")]
+        public IActionResult BuscarRelatorio(string NomeArquivo)
+        {
+            var relatorios = _context.relatorio
+                .Where(r => r.NomeArquivo.Contains(NomeArquivo))
+                .ToList();
+
+
+            return Ok(relatorios);
+
         }
     }
 }
